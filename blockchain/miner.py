@@ -32,7 +32,7 @@ def proof_of_work(last_proof):
     while valid_proof(last_hash, proof) is False:
         proof += 0.33
     
-    return proof
+    # return proof
 
     print("Proof found: " + str(proof) + " in " + str(timer() - start))
     return proof

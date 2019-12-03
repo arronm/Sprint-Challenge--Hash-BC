@@ -22,10 +22,14 @@ def proof_of_work(last_proof):
     """
 
     start = timer()
+    print(last_proof)
+    # last = 
+    last_hash = hashlib.sha256(f'{last_proof}'.encode()).hexdigest()
 
-    print("Searching for next proof")
+    print("Searching for next proof:", last_proof)
     proof = 0
-    #  TODO: Your code here
+    while valid_proof(last_hash, proof) is False:
+        proof += 0.33
 
     print("Proof found: " + str(proof) + " in " + str(timer() - start))
     return proof
@@ -39,8 +43,10 @@ def valid_proof(last_hash, proof):
     IE:  last_hash: ...AE9123456, new hash 123456888...
     """
 
-    # TODO: Your code here!
-    pass
+    guess = f'{proof}'.encode()
+    guess_hash = hashlib.sha256(guess).hexdigest()
+
+    return guess_hash[:6] == last_hash[-6:]
 
 
 if __name__ == '__main__':
@@ -48,33 +54,50 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         node = sys.argv[1]
     else:
-        node = "https://lambda-coin.herokuapp.com/api"
+        node = "https://lambda-coin-test-1.herokuapp.com/api"
 
     coins_mined = 0
 
     # Load or create ID
     f = open("my_id.txt", "r")
-    id = f.read()
-    print("ID is", id)
+    my_id = f.read()
+    print("my_id is", my_id)
     f.close()
 
-    if id == 'NONAME\n':
-        print("ERROR: You must change your name in `my_id.txt`!")
+    if my_id == 'NONAME\n':
+        print("ERROR: You must change your name in `my_my_id.txt`!")
         exit()
     # Run forever until interrupted
+    proofs = {}
     while True:
         # Get the last proof from the server
         r = requests.get(url=node + "/last_proof")
-        data = r.json()
-        new_proof = proof_of_work(data.get('proof'))
+        last_proof = r.json()
+        if (proofs.get(last_proof.get('proof'))):
+            post_data = {
+                "proof": proofs[last_proof.get('proof')],
+                "id": my_id}
 
-        post_data = {"proof": new_proof,
-                     "id": id}
-
-        r = requests.post(url=node + "/mine", json=post_data)
-        data = r.json()
-        if data.get('message') == 'New Block Forged':
-            coins_mined += 1
-            print("Total coins mined: " + str(coins_mined))
+            r = requests.post(url=node + "/mine", json=post_data)
+            data = r.json()
+            if data.get('message') == 'New Block Forged':
+                coins_mined += 1
+                print("Total coins mined: " + str(coins_mined))
+            else:
+                print(data.get('message'))
         else:
-            print(data.get('message'))
+            new_proof = proof_of_work(last_proof.get('proof'))
+
+            post_data = {
+                "proof": new_proof,
+                "id": my_id}
+
+            r = requests.post(url=node + "/mine", json=post_data)
+            data = r.json()
+            if data.get('message') == 'New Block Forged':
+                coins_mined += 1
+                print("Total coins mined: " + str(coins_mined))
+            else:
+                if data.get('message') is None:
+                    proofs[last_proof.get('proof')] = new_proof
+                print(data.get('message'))
